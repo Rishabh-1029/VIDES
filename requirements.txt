@@ -1,0 +1,8 @@
+deep_sort_realtime
+matplotlib
+numpy
+opencv_python
+pandas
+torch
+ultralytics
+python-dotenv
