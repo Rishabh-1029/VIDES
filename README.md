@@ -19,6 +19,14 @@
 
 ---
 
+## Custom Model (Faster R-CNN)
+
+For research and experimentation purposes, VIDES also includes a custom vehicle detection model based on Faster R-CNN architecture. This model is trained and evaluated separately from the main YOLOv8 pipeline to explore performance trade-offs and detection accuracy in different traffic scenarios.
+
+Link : https://github.com/Rishabh-1029/ATMS-project/blob/main/Main_custom.ipynb
+
+---
+
 ## Tech Stack
   
   language: 
