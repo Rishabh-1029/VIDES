@@ -27,6 +27,16 @@ Link : [https://github.com/Rishabh-1029/ATMS-project/Custom_Vehicle_detection](h
 
 ---
 
+## Automatic Number Plate Recognition (ANPR)
+
+The ANPR system includes a vehicle detection and a custom number plate detection model based on the YOLOv8 architecture. This model is trained and evaluated independently to ensure high detection accuracy and robustness across various vehicle types and plate formats.
+
+The model demonstrates strong performance metrics including high precision and recall, making it a reliable component in real-world traffic surveillance and recognition tasks. It serves as a specialized enhancement over generic object detectors for number plate localization.
+
+Link : [https://github.com/Rishabh-1029/ANPR](https://github.com/Rishabh-1029/ANPR)
+
+---
+
 ## Tech Stack
   
   language: 
