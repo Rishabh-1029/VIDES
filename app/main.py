@@ -12,6 +12,7 @@ from app.events.accident import detect_accident
 from app.events.heavy import heavy_vehicle_detection
 from app.database.reports import reports
 
+
 # ========== INIT ==========
 
 H, bev_size = get_bev_homography(settings.src_pts)
