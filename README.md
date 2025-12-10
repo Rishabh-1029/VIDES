@@ -39,21 +39,21 @@ Link : [https://github.com/Rishabh-1029/ANPR](https://github.com/Rishabh-1029/AN
 
 ## Tech Stack
   
-  language: 
-    - Python 3.10+
+  Language: 
+    - Python
   
-  object_detection:
-    library: YOLOv8
-    source: https://github.com/ultralytics/ultralytics
-
-  object_tracking:
-    library: DeepSORT
-    implementation: deep_sort_realtime
-    source: https://github.com/nwojke/deep_sort
-
-  computer_vision:
+  Computer Vision:
     - OpenCV
+  
+  Object Detection:
+    library: 
+      - YOLOv8 (https://github.com/ultralytics/ultralytics)
+      - Faster R-CNN (https://github.com/jwyang/faster-rcnn.pytorch)
 
-  data_processing:
+  Object Tracking:
+    library: 
+      - DeepSORT (https://github.com/nwojke/deep_sort)
+
+  Data Processing:
     - NumPy
     - Pandas
