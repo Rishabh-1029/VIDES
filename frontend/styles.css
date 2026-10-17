@@ -1299,3 +1299,25 @@ html[data-theme="dark"] #configure-view .session-actions > p { color: #b0c0b4; }
   #configure-view .roi-reset-button,
   #configure-view .roi-save-button { padding: 0 8px; font-size: 11px; }
 }
+
+#configure-view #camera-input-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 290px) auto;
+  align-items: end;
+  gap: 9px 13px;
+  min-height: 0;
+}
+#configure-view #camera-input-row[hidden] { display: none; }
+#configure-view #camera-input-row .browser-camera-select-group { width: 100%; }
+#configure-view #camera-input-row .configured-feed { justify-self: start; }
+#configure-view #camera-input-row .input-hint { grid-column: 1 / -1; margin: 0; color: #718078; font-size: 11px; line-height: 1.5; }
+#configure-view #camera-input-row .input-hint.camera-error { color: #b74d4d; }
+#browser-camera-preview[hidden] { display: none; }
+html[data-theme="dark"] #configure-view #camera-input-row .input-hint { color: #a2b2a7; }
+html[data-theme="dark"] #configure-view #camera-input-row .input-hint.camera-error { color: #f0a0a0; }
+
+@media (max-width: 620px) {
+  #configure-view #camera-input-row { grid-template-columns: minmax(0, 1fr); align-items: stretch; }
+  #configure-view #camera-input-row .configured-feed { justify-self: start; }
+  #configure-view #camera-input-row .input-hint { grid-column: auto; }
+}

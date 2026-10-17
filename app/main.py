@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Literal
 
 import numpy as np
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -38,11 +38,14 @@ UPLOAD_DIR = Path(tempfile.gettempdir()) / "vides-uploads"
 ROI_CONFIG_PATH = PROJECT_ROOT / "config" / "roi.json"
 TRAFFIC_CONFIG_PATH = PROJECT_ROOT / "config" / "traffic.json"
 MAX_UPLOAD_BYTES = 500 * 1024 * 1024
+MAX_BROWSER_FRAME_BYTES = 2 * 1024 * 1024
 ROI_EXTENSION_RATIO = 0.25
 ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".m4v"}
 uploads: dict[str, Path] = {}
 upload_names: dict[str, str] = {}
 upload_metadata: dict[str, dict] = {}
+browser_camera_sources: dict[str, "BrowserCameraCapture"] = {}
+browser_camera_sources_lock = threading.RLock()
 
 FLOW_DIRECTIONS = {
     "toward_top": 0,
@@ -59,8 +62,10 @@ DEFAULT_TRAFFIC_CONFIG = {
 
 
 class StartRequest(BaseModel):
-    source: Literal["camera", "rtsp", "configured", "upload"]
+    source: Literal["camera", "browser_camera", "rtsp", "configured", "upload"]
     camera_index: int = Field(default=0, ge=0, le=20)
+    camera_stream_id: str | None = Field(default=None, min_length=32, max_length=32)
+    camera_label: str | None = Field(default=None, max_length=100)
     rtsp_url: str | None = None
     upload_id: str | None = None
     speed_limit: float | None = Field(default=None, ge=1, le=300)
@@ -241,6 +246,60 @@ DEFAULT_ROI_POINTS = [[float(x), float(y)] for x, y in settings.src_pts.tolist()
 settings.src_pts = np.asarray(load_saved_roi(), dtype=np.float32)
 
 
+class BrowserCameraCapture:
+    """Expose the newest browser-provided frame through OpenCV's capture interface."""
+
+    fps = 8.0
+
+    def __init__(self, stream_id: str) -> None:
+        self.stream_id = stream_id
+        self._condition = threading.Condition()
+        self._frame = None
+        self._sequence = 0
+        self._last_read_sequence = 0
+        self._last_read_at: float | None = None
+        self._closed = False
+        self.fps = 8.0
+
+    def isOpened(self) -> bool:
+        with self._condition:
+            return not self._closed
+
+    def push_frame(self, frame) -> None:
+        with self._condition:
+            if self._closed:
+                return
+            self._frame = frame
+            self._sequence += 1
+            self._condition.notify_all()
+
+    def read(self):
+        with self._condition:
+            arrived = self._condition.wait_for(
+                lambda: self._sequence > self._last_read_sequence or self._closed,
+                timeout=3.0,
+            )
+            if self._closed or not arrived or self._frame is None:
+                return False, None
+            self._last_read_sequence = self._sequence
+            now = time.monotonic()
+            if self._last_read_at is not None:
+                interval = now - self._last_read_at
+                if interval > 0:
+                    observed_fps = min(30.0, max(1.0, 1.0 / interval))
+                    self.fps = self.fps * 0.75 + observed_fps * 0.25
+            self._last_read_at = now
+            return True, self._frame.copy()
+
+    def get(self, property_id: int) -> float:
+        return self.fps
+
+    def release(self) -> None:
+        with self._condition:
+            self._closed = True
+            self._condition.notify_all()
+
+
 class DetectionSession:
     """Owns one capture loop and exposes a thread-safe view for the UI."""
 
@@ -248,7 +307,7 @@ class DetectionSession:
         self._lock = threading.RLock()
         self._stop = threading.Event()
         self._worker: threading.Thread | None = None
-        self._source: int | str | None = None
+        self._source: int | str | BrowserCameraCapture | None = None
         self._roi_points = [[float(x), float(y)] for x, y in settings.src_pts.tolist()]
         self._traffic_config = dict(TRAFFIC_CONFIG)
         self._active_traffic_config = dict(TRAFFIC_CONFIG)
@@ -279,7 +338,7 @@ class DetectionSession:
         self._frame = None
         self._frame_number = 0
 
-    def start(self, source: int | str, source_label: str, speed_limit: float) -> str:
+    def start(self, source: int | str | BrowserCameraCapture, source_label: str, speed_limit: float) -> str:
         with self._lock:
             if self._data["state"] in {"starting", "running", "stopping"}:
                 raise RuntimeError("A detection session is already running.")
@@ -309,6 +368,8 @@ class DetectionSession:
             if self._data["state"] in {"starting", "running"}:
                 self._data["state"] = "stopping"
                 self._stop.set()
+                if isinstance(self._source, BrowserCameraCapture):
+                    self._source.release()
 
     def is_running(self) -> bool:
         with self._lock:
@@ -407,7 +468,7 @@ class DetectionSession:
             state = "error" if self._data["error"] else "completed"
             self._data.update(state=state, finished_at=datetime.now(timezone.utc).isoformat())
 
-    def _process(self, source: int | str, speed_limit: float) -> None:
+    def _process(self, source: int | str | BrowserCameraCapture, speed_limit: float) -> None:
         cap = None
         try:
             import cv2
@@ -423,7 +484,7 @@ class DetectionSession:
             from app.events.overspeed import check_overspeed
             from app.events.stalling import is_stalled
 
-            cap = cv2.VideoCapture(source)
+            cap = source if isinstance(source, BrowserCameraCapture) else cv2.VideoCapture(source)
             if not cap.isOpened():
                 raise RuntimeError("VIDES could not open this video source. Check the camera or stream URL.")
 
@@ -455,6 +516,11 @@ class DetectionSession:
                 ok, frame = cap.read()
                 if not ok:
                     break
+                if isinstance(cap, BrowserCameraCapture):
+                    observed_fps = cap.get(cv2.CAP_PROP_FPS)
+                    if observed_fps and np.isfinite(observed_fps) and observed_fps > 0:
+                        fps = observed_fps
+                        frame_interval = 1.0 / fps
                 frame = cv2.resize(frame, (settings.dst_width, settings.dst_height))
                 latest_roi_points = np.asarray(self.roi_points(), dtype=np.float32)
                 if not np.array_equal(latest_roi_points, roi_source_points):
@@ -825,11 +891,66 @@ def preview_source(request: PreviewRequest) -> dict:
         capture.release()
 
 
+@app.websocket("/api/session/camera/{stream_id}")
+async def receive_browser_camera(websocket: WebSocket, stream_id: str) -> None:
+    await websocket.accept()
+    try:
+        if uuid.UUID(hex=stream_id).hex != stream_id.lower():
+            raise ValueError("Invalid camera stream id")
+    except ValueError:
+        await websocket.close(code=4400, reason="Invalid camera stream id")
+        return
+
+    try:
+        import cv2
+    except ImportError:
+        await websocket.close(code=1011, reason="OpenCV is not installed")
+        return
+
+    capture = BrowserCameraCapture(stream_id)
+    with browser_camera_sources_lock:
+        already_connected = stream_id in browser_camera_sources
+        if not already_connected:
+            browser_camera_sources[stream_id] = capture
+    if already_connected:
+        await websocket.close(code=4409, reason="Camera stream id is already connected")
+        return
+
+    try:
+        while capture.isOpened():
+            payload = await websocket.receive_bytes()
+            if len(payload) > MAX_BROWSER_FRAME_BYTES:
+                await websocket.close(code=1009, reason="Camera frame is too large")
+                break
+            frame = cv2.imdecode(np.frombuffer(payload, dtype=np.uint8), cv2.IMREAD_COLOR)
+            if frame is None:
+                continue
+            if frame.shape[1] > 4096 or frame.shape[0] > 4096:
+                await websocket.close(code=1009, reason="Camera frame dimensions are too large")
+                break
+            capture.push_frame(frame)
+    except WebSocketDisconnect:
+        pass
+    finally:
+        capture.release()
+        with browser_camera_sources_lock:
+            if browser_camera_sources.get(stream_id) is capture:
+                browser_camera_sources.pop(stream_id, None)
+
+
 @app.post("/api/session/start")
 def start_session(request: StartRequest) -> dict:
     if request.source == "camera":
-        source: int | str = request.camera_index
+        source: int | str | BrowserCameraCapture = request.camera_index
         label = f"Local camera {request.camera_index}"
+    elif request.source == "browser_camera":
+        if not request.camera_stream_id:
+            raise HTTPException(status_code=422, detail="Connect a browser camera before starting detection.")
+        with browser_camera_sources_lock:
+            source = browser_camera_sources.get(request.camera_stream_id)
+        if source is None or not source.isOpened():
+            raise HTTPException(status_code=409, detail="The browser camera connection is no longer active. Reconnect the camera and try again.")
+        label = (request.camera_label or "Browser camera").strip()[:100] or "Browser camera"
     elif request.source == "rtsp":
         if not request.rtsp_url or not request.rtsp_url.strip():
             raise HTTPException(status_code=422, detail="Enter a video stream URL first.")

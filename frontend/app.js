@@ -13,6 +13,14 @@ const ui = {
   currentView: "docs",
   uploadId: null,
   uploadName: null,
+  browserCameraDevices: [],
+  browserCameraDeviceId: null,
+  browserCameraLabel: null,
+  browserCameraStream: null,
+  browserCameraSocket: null,
+  browserCameraPump: false,
+  browserCameraRunId: null,
+  browserCameraBusy: false,
   runId: null,
   filter: "all",
   uploading: false,
@@ -245,6 +253,7 @@ function setVideoState(status) {
   $("#source-pulse").classList.toggle("is-live", Boolean(status?.running));
 
   ui.stop.disabled = !status?.running;
+  updateBrowserCameraControls();
   $("#download-report").disabled = !hasSession;
   ui.start.innerHTML = status?.state === "stopping" ? '<span class="start-icon">◌</span> Stopping…' : status?.running ? '<span class="start-icon">◌</span> Detection running' : ui.starting || status?.state === "starting" ? '<span class="start-icon">◌</span> Starting…' : '<span class="start-icon">▶</span> Start detection';
   if (status?.error) {
@@ -259,6 +268,10 @@ function setVideoState(status) {
   }
   $("#video-empty").style.display = hasFrame && state !== "error" ? "none" : "flex";
   if (!hasFrame && state !== "running") ui.image.classList.remove("visible");
+  if (ui.browserCameraRunId && status?.run_id === ui.browserCameraRunId && ["completed", "error"].includes(state)) {
+    closeBrowserCameraTransport();
+    updateBrowserCameraHint(state === "error" ? "The camera session ended after an error. Reconnect to try again." : "Camera session finished. Enable camera access to use it again.");
+  }
   $("#metric-vehicles").textContent = status?.run_id ? String(status.total_vehicles || 0) : "—";
   $("#vehicle-foot").textContent = status?.run_id ? `${Object.keys(status.vehicles_by_class || {}).length} vehicle classes observed` : "Waiting for a feed";
   $("#metric-speed").textContent = status?.run_id && status.total_vehicles ? Number(status.average_speed || 0).toFixed(1) : "—";
@@ -786,7 +799,13 @@ function queueUploadedFramePreview() {
 
 function sourceRequest() {
   const request = { source: ui.sourceMode };
-  if (ui.sourceMode === "camera") request.camera_index = Number($("#camera-index").value || 0);
+  if (ui.sourceMode === "camera") {
+    if (!ui.browserCameraStream) {
+      throw new Error("Enable camera access and select a camera before continuing.");
+    }
+    request.source = "browser_camera";
+    request.camera_label = ui.browserCameraLabel || "Browser camera";
+  }
   if (ui.sourceMode === "rtsp") {
     request.source = $("#rtsp-url").dataset.configured === "true" ? "configured" : "rtsp";
     if (request.source === "rtsp") request.rtsp_url = $("#rtsp-url").value.trim();
@@ -796,6 +815,249 @@ function sourceRequest() {
     request.upload_id = ui.uploadId;
   }
   return request;
+}
+
+function stopCameraStream(stream = ui.browserCameraStream) {
+  if (!stream) return;
+  stream.getTracks().forEach((track) => track.stop());
+  if (ui.browserCameraStream === stream) {
+    ui.browserCameraStream = null;
+    $("#browser-camera-preview").srcObject = null;
+    $("#enable-browser-camera").textContent = "Enable camera access";
+  }
+}
+
+function updateBrowserCameraHint(message, isError = false) {
+  const hint = $("#browser-camera-hint");
+  hint.textContent = message;
+  hint.classList.toggle("camera-error", isError);
+}
+
+function updateBrowserCameraControls() {
+  const sessionLocked = Boolean(ui.status?.running || ui.starting);
+  $$(".source-tab").forEach((tab) => { tab.disabled = sessionLocked; });
+  $("#browser-camera-select").disabled = !ui.browserCameraDevices.length || sessionLocked || ui.browserCameraBusy;
+  $("#enable-browser-camera").disabled = sessionLocked || ui.browserCameraBusy;
+}
+
+function renderBrowserCameraDevices(devices, selectedId = ui.browserCameraDeviceId) {
+  const select = $("#browser-camera-select");
+  ui.browserCameraDevices = devices;
+  select.replaceChildren();
+  if (!devices.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No cameras found";
+    select.append(option);
+    select.disabled = true;
+    return;
+  }
+  devices.forEach((device, index) => {
+    const option = document.createElement("option");
+    option.value = device.deviceId;
+    option.textContent = device.label || `Camera ${index + 1}`;
+    select.append(option);
+  });
+  select.disabled = Boolean(ui.status?.running || ui.starting || ui.browserCameraBusy);
+  if (devices.some((device) => device.deviceId === selectedId)) select.value = selectedId;
+  else select.selectedIndex = 0;
+}
+
+async function refreshBrowserCameraDevices() {
+  if (!navigator.mediaDevices?.enumerateDevices) return;
+  const devices = (await navigator.mediaDevices.enumerateDevices()).filter((device) => device.kind === "videoinput");
+  renderBrowserCameraDevices(devices);
+}
+
+async function attachBrowserCamera(stream) {
+  const video = $("#browser-camera-preview");
+  const previousStream = ui.browserCameraStream;
+  const track = stream.getVideoTracks()[0];
+  if (!track) {
+    stopCameraStream(stream);
+    throw new Error("The selected device did not provide a video camera.");
+  }
+  ui.browserCameraStream = stream;
+  ui.browserCameraDeviceId = track.getSettings().deviceId || $("#browser-camera-select").value || null;
+  ui.browserCameraLabel = track.label || $("#browser-camera-select").selectedOptions[0]?.textContent || "Browser camera";
+  track.addEventListener("ended", () => {
+    if (ui.browserCameraStream !== stream) return;
+    if (ui.browserCameraRunId) {
+      stopDetection();
+    } else {
+      stopCameraStream(stream);
+      updateBrowserCameraHint("The selected camera disconnected. Reconnect or choose another camera.", true);
+      invalidateFramePreview();
+    }
+  }, { once: true });
+  video.srcObject = stream;
+  try {
+    await video.play();
+    await new Promise((resolve) => {
+      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) resolve();
+      else video.addEventListener("loadeddata", resolve, { once: true });
+    });
+  } catch (error) {
+    stopCameraStream(stream);
+    throw new Error(error.name === "NotAllowedError" ? "Allow camera access in your browser, then try again." : "The selected camera could not start.");
+  }
+  if (previousStream && previousStream !== stream) stopCameraStream(previousStream);
+  await refreshBrowserCameraDevices();
+  if (!ui.browserCameraDeviceId) ui.browserCameraDeviceId = $("#browser-camera-select").value || null;
+  if (!track.label && ui.browserCameraDeviceId) {
+    ui.browserCameraLabel = ui.browserCameraDevices.find((device) => device.deviceId === ui.browserCameraDeviceId)?.label
+      || ui.browserCameraLabel;
+  }
+  if (ui.browserCameraDeviceId) $("#browser-camera-select").value = ui.browserCameraDeviceId;
+  $("#enable-browser-camera").textContent = "Refresh camera list";
+  updateBrowserCameraHint(`${ui.browserCameraLabel} is connected. Capture a frame to configure its road zone.`);
+  invalidateFramePreview();
+  updateSetupReadiness();
+  return true;
+}
+
+async function enableBrowserCameraAccess() {
+  const button = $("#enable-browser-camera");
+  ui.browserCameraBusy = true;
+  button.disabled = true;
+  const existingStream = ui.browserCameraStream;
+  try {
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Browser cameras require HTTPS (or localhost) and media device support.");
+    }
+    if (existingStream) {
+      await refreshBrowserCameraDevices();
+      updateBrowserCameraHint("Camera list refreshed. Select a camera to switch devices.");
+      return;
+    }
+    updateBrowserCameraHint("Waiting for camera permission…");
+    const videoConstraints = { width: { ideal: 1280 }, height: { ideal: 720 } };
+    if (ui.browserCameraDeviceId) videoConstraints.deviceId = { exact: ui.browserCameraDeviceId };
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: videoConstraints,
+      audio: false,
+    });
+    await attachBrowserCamera(stream);
+    await captureFrame();
+  } catch (error) {
+    updateBrowserCameraHint(error.message || "Could not access this device's cameras.", true);
+    showToast(error.message || "Could not access this device's cameras.", true);
+  } finally {
+    ui.browserCameraBusy = false;
+    updateBrowserCameraControls();
+  }
+}
+
+async function selectBrowserCamera(deviceId) {
+  if (!deviceId || deviceId === ui.browserCameraDeviceId || ui.browserCameraRunId) return;
+  const button = $("#enable-browser-camera");
+  ui.browserCameraBusy = true;
+  button.disabled = true;
+  updateBrowserCameraHint("Connecting to the selected camera…");
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        deviceId: { exact: deviceId },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+      audio: false,
+    });
+    await attachBrowserCamera(stream);
+    await captureFrame();
+  } catch (error) {
+    updateBrowserCameraHint(error.message || "Could not connect to the selected camera.", true);
+    showToast(error.message || "Could not connect to the selected camera.", true);
+    if (ui.browserCameraDeviceId) $("#browser-camera-select").value = ui.browserCameraDeviceId;
+  } finally {
+    ui.browserCameraBusy = false;
+    updateBrowserCameraControls();
+  }
+}
+
+function closeBrowserCameraTransport({ stopCamera = true } = {}) {
+  ui.browserCameraPump = false;
+  const socket = ui.browserCameraSocket;
+  ui.browserCameraSocket = null;
+  if (socket && socket.readyState < WebSocket.CLOSING) socket.close();
+  ui.browserCameraRunId = null;
+  if (stopCamera) stopCameraStream();
+}
+
+async function connectBrowserCameraTransport(streamId) {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const socket = new WebSocket(`${protocol}//${window.location.host}/api/session/camera/${encodeURIComponent(streamId)}`);
+  ui.browserCameraSocket = socket;
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("Timed out connecting the camera to VIDES.")), 8000);
+    socket.addEventListener("open", () => { clearTimeout(timer); resolve(); }, { once: true });
+    socket.addEventListener("error", () => { clearTimeout(timer); reject(new Error("Could not open the camera connection to VIDES.")); }, { once: true });
+    socket.addEventListener("close", () => {
+      clearTimeout(timer);
+      if (ui.browserCameraSocket === socket && ui.browserCameraRunId) {
+        ui.browserCameraPump = false;
+        ui.browserCameraSocket = null;
+        ui.browserCameraRunId = null;
+        stopCameraStream();
+        showToast("The browser camera connection closed.", true);
+      }
+    });
+  });
+  return socket;
+}
+
+function newBrowserCameraStreamId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID().replaceAll("-", "");
+  return Array.from(window.crypto.getRandomValues(new Uint8Array(16)), (value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+function startBrowserCameraPump(socket, runId) {
+  const canvas = document.createElement("canvas");
+  const size = ui.config?.frame_size || { width: 640, height: 360 };
+  canvas.width = size.width;
+  canvas.height = size.height;
+  const context = canvas.getContext("2d", { alpha: false });
+  const video = $("#browser-camera-preview");
+  ui.browserCameraPump = true;
+  ui.browserCameraRunId = runId;
+
+  const sendFrames = async () => {
+    while (ui.browserCameraPump && ui.browserCameraSocket === socket && socket.readyState === WebSocket.OPEN) {
+      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && socket.bufferedAmount < 512 * 1024) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.78));
+        if (blob && ui.browserCameraPump && socket.readyState === WebSocket.OPEN) socket.send(blob);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 125));
+    }
+  };
+  sendFrames().catch((error) => {
+    if (ui.browserCameraRunId === runId) {
+      closeBrowserCameraTransport();
+      showToast(error.message || "Could not send camera frames to VIDES.", true);
+    }
+  });
+}
+
+function browserFrameImage(width, height) {
+  const video = $("#browser-camera-preview");
+  if (!ui.browserCameraStream || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+    throw new Error("Connect a camera and wait for its preview before capturing a frame.");
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext("2d", { alpha: false }).drawImage(video, 0, 0, width, height);
+  return new Promise((resolve, reject) => canvas.toBlob((blob) => {
+    if (!blob) {
+      reject(new Error("The browser could not capture a frame from this camera."));
+      return;
+    }
+    const image = new Image();
+    image.onload = () => { URL.revokeObjectURL(image.src); resolve(image); };
+    image.onerror = () => { URL.revokeObjectURL(image.src); reject(new Error("The captured camera frame could not be displayed.")); };
+    image.src = URL.createObjectURL(blob);
+  }, "image/jpeg", 0.9));
 }
 
 async function captureFrame() {
@@ -817,17 +1079,25 @@ async function captureFrame() {
     const request = sourceRequest();
     const requestedSourceKey = JSON.stringify(request);
     if (request.source === "upload") request.frame_index = ui.previewFrameIndex;
-    const result = await api("/api/session/preview", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(request),
-    });
-    const image = new Image();
-    await new Promise((resolve, reject) => {
-      image.onload = resolve;
-      image.onerror = () => reject(new Error("The selected frame could not be displayed."));
-      image.src = `data:image/jpeg;base64,${result.image_base64}`;
-    });
+    let result;
+    let image;
+    if (request.source === "browser_camera") {
+      const frameSize = ui.config?.frame_size || ui.frameSize;
+      image = await browserFrameImage(frameSize.width, frameSize.height);
+      result = { source_label: ui.browserCameraLabel || "Browser camera", live_frame: true };
+    } else {
+      result = await api("/api/session/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+      });
+      image = new Image();
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = () => reject(new Error("The selected frame could not be displayed."));
+        image.src = `data:image/jpeg;base64,${result.image_base64}`;
+      });
+    }
     if (previewSequence !== ui.previewSequence) return;
     ui.roiImage = image;
     if (requestedSourceKey === sourceSelectionKey()) {
@@ -1087,6 +1357,11 @@ async function refresh() {
 
 function selectSource(mode) {
   ui.sourceMode = mode;
+  if (mode !== "camera" && !ui.browserCameraRunId && ui.browserCameraStream) {
+    stopCameraStream();
+    $("#enable-browser-camera").textContent = "Enable camera access";
+    updateBrowserCameraHint("Camera access paused. Enable it again to reconnect to this camera.");
+  }
   invalidateFramePreview();
   $$(".source-tab").forEach((tab) => {
     const selected = tab.dataset.source === mode;
@@ -1121,25 +1396,35 @@ async function startDetection() {
   }
   body.speed_limit = speedLimit;
   ui.starting = true;
+  updateBrowserCameraControls();
   updateSetupReadiness();
+  let browserSocket = null;
   try {
+    if (body.source === "browser_camera") {
+      body.camera_stream_id = newBrowserCameraStreamId();
+      browserSocket = await connectBrowserCameraTransport(body.camera_stream_id);
+    }
     const response = await api("/api/session/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
     ui.runId = response.run_id;
+    if (browserSocket) startBrowserCameraPump(browserSocket, response.run_id);
     ui.image.src = `/api/stream?run=${encodeURIComponent(response.run_id)}`;
     ui.image.classList.remove("visible");
     $("#video-error").hidden = true;
     ui.starting = false;
+    updateBrowserCameraControls();
     ui.status = { ...(ui.status || {}), running: true, state: "starting", run_id: response.run_id };
     updateSetupReadiness();
     activateWorkspaceView("monitor");
     showToast("Detection session started.");
     await refresh();
   } catch (error) {
+    if (body.source === "browser_camera" || browserSocket) closeBrowserCameraTransport({ stopCamera: false });
     ui.starting = false;
+    updateBrowserCameraControls();
     updateSetupReadiness();
     showToast(error.message || "Could not start the detection session.", true);
     await refresh();
@@ -1150,6 +1435,8 @@ async function stopDetection() {
   ui.stop.disabled = true;
   try {
     await api("/api/session/stop", { method: "POST" });
+    closeBrowserCameraTransport();
+    updateBrowserCameraHint("Camera session stopped. Enable camera access to use it again.");
     showToast("Stopping detection session…");
     await refresh();
   } catch (error) {
@@ -1265,7 +1552,11 @@ function bindEvents() {
   $("#road-length").addEventListener("input", () => { ui.trafficTouched = true; renderTrafficControls(); });
   $("#detection-confidence").addEventListener("input", () => { ui.trafficTouched = true; renderTrafficControls(); });
   $("#video-frame-slider").addEventListener("input", queueUploadedFramePreview);
-  $("#camera-index").addEventListener("change", () => invalidateFramePreview());
+  $("#enable-browser-camera").addEventListener("click", enableBrowserCameraAccess);
+  $("#browser-camera-select").addEventListener("change", (event) => selectBrowserCamera(event.target.value));
+  navigator.mediaDevices?.addEventListener?.("devicechange", () => {
+    refreshBrowserCameraDevices().catch(() => updateBrowserCameraHint("Could not refresh the camera list.", true));
+  });
   $("#rtsp-url").addEventListener("input", () => {
     $("#rtsp-url").dataset.configured = "false";
     $("#configured-feed-button").textContent = "Use configured feed";
@@ -1326,6 +1617,7 @@ function boot() {
   window.addEventListener("popstate", () => activateWorkspaceView(viewFromHash(), false));
   refresh();
   ui.refreshTimer = setInterval(refresh, 1800);
+  window.addEventListener("pagehide", () => closeBrowserCameraTransport());
 }
 
 document.addEventListener("DOMContentLoaded", boot);

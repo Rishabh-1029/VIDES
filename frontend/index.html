@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/styles.css?v=configure-layout-1" />
+    <link rel="stylesheet" href="/styles.css?v=browser-camera-1" />
   </head>
   <body>
     <div class="app-shell">
@@ -191,8 +191,10 @@
               </div>
 
               <div class="source-input-row" id="camera-input-row">
-                <label class="input-group"><span>CAMERA DEVICE</span><select id="camera-index"><option value="0">Camera 0</option><option value="1">Camera 1</option><option value="2">Camera 2</option></select></label>
-                <p class="input-hint">Uses a camera connected to the machine running the VIDES backend.</p>
+                <label class="input-group browser-camera-select-group"><span>CAMERAS ON THIS DEVICE</span><select id="browser-camera-select" disabled><option value="">Allow camera access to find cameras</option></select></label>
+                <button class="configured-feed" id="enable-browser-camera" type="button">Enable camera access</button>
+                <p class="input-hint" id="browser-camera-hint">Choose a camera available to this browser. Camera access requires HTTPS or localhost.</p>
+                <video id="browser-camera-preview" autoplay muted playsinline hidden></video>
               </div>
               <div class="source-input-row" id="rtsp-input-row" hidden>
                 <label class="input-group grow"><span>NETWORK STREAM URL</span><input id="rtsp-url" type="url" placeholder="rtsp://192.168.1.20:554/stream" autocomplete="off" /></label>
@@ -398,6 +400,6 @@
       </main>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="/app.js?v=theme-toggle-2" defer></script>
+    <script src="/app.js?v=browser-camera-1" defer></script>
   </body>
 </html>
