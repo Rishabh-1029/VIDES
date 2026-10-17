@@ -4,6 +4,8 @@ VIDES (Vehicle Intelligent Detection & Event System) is a vehicle detection and 
 
 The Python backend processes the video source. A browser dashboard lets an operator configure the view, monitor detection, review session events, and download reports.
 
+Deployed URL : `https://vides.onrender.com/`
+
 ## Features
 
 - Real-time vehicle detection and multi-object tracking.
