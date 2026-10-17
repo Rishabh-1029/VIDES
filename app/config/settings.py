@@ -1,22 +1,21 @@
-import torch
 import numpy as np
-from dotenv import load_dotenv
 import os
+from pathlib import Path
 
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # RTSP feed
-feed_ip_url=os.getenv("feed_ip_url")
-print(feed_ip_url)
+feed_ip_url = os.getenv("feed_ip_url") or None
 
-# Device - GPU/CPU using CUDA
-device = 0 if torch.cuda.is_available() else 'cpu'
-
-# YOLO model for Vehicle detection
-model_path = os.getenv("model_path")
+# YOLO model for vehicle detection. The custom VIDES model is the default.
+model_path = Path(os.getenv("model_path", str(Path(__file__).resolve().parents[2] / "models" / "Custom_yolov8m.pt")))
 
 # Region of Interest (ROI)
-src_pts = np.array([[245, 0], [330, 0], [740, 360], [0, 360]], np.float32)
+src_pts = np.array([[245, 0], [330, 0], [640, 360], [0, 360]], np.float32)
 
 # Frame Size
 dst_width = 640
@@ -24,6 +23,7 @@ dst_height = 360
 
 # Speed Limit
 speed_limit = 30
+detection_confidence = 0.6
 
 # Vehicle expected movement
 expected_movement = [0, -1]

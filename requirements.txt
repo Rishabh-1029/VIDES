@@ -6,3 +6,6 @@ pandas
 torch
 ultralytics
 python-dotenv
+fastapi
+uvicorn[standard]
+python-multipart

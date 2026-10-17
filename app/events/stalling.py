@@ -8,10 +8,11 @@ def is_stalled(car_coordinates, car_id, fps, meters_per_pixel):
         return False
 
     coords = car_coordinates[car_id]
-    if len(coords) < fps * 5:
+    window = max(1, int(fps * 5))
+    if len(coords) < window:
         return False
 
-    recent_coords = coords[-(fps * 5):]
+    recent_coords = coords[-window:]
     base_coord = recent_coords[0]
 
     for pt in recent_coords[1:]:

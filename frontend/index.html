@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a1420" />
+    <meta name="description" content="VIDES vehicle detection and traffic event monitoring dashboard." />
+    <title>VIDES — Traffic intelligence</title>
+    <link rel="icon" type="image/svg+xml" href="/vides-favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="#docs" data-view-target="docs" aria-label="VIDES home">
+          <svg class="brand-mark" viewBox="0 0 54 54" role="img" aria-label="VIDES vehicle detection mark">
+            <path d="M8 27a19 19 0 0 1 38 0" class="signal signal-one" />
+            <path d="M14 27a13 13 0 0 1 26 0" class="signal signal-two" />
+            <circle cx="27" cy="22" r="3.1" class="signal-dot" />
+            <path d="M8.4 34.4 10 31.8c.5-.8 1.3-1.3 2.2-1.4l9.1-.9 5.1-5.1c.7-.7 1.6-1.1 2.6-1.1h6.3c1 0 1.9.3 2.7 1l6.1 5.2 4.3.9c1.2.3 2 1.3 2 2.5v3.9c0 1.4-1.1 2.5-2.5 2.5H11c-1.7 0-3-1.8-2.6-4.9Z" class="car-body" />
+            <path d="m20.5 30 5-5h4.2l3.8 5H20.5Zm15.3 0-3.5-5h2.2l5.8 5h-4.5Z" class="car-window" />
+            <circle cx="17" cy="38" r="3.3" class="wheel" />
+            <circle cx="39" cy="38" r="3.3" class="wheel" />
+          </svg>
+          <span class="brand-copy"><strong>VIDES</strong><small>TRAFFIC INTELLIGENCE</small></span>
+        </a>
+
+        <div class="side-label">WORKSPACE</div>
+        <nav class="side-nav" aria-label="Main navigation">
+          <button class="nav-link active" type="button" data-view-target="docs" aria-label="Home" title="Home" aria-current="page"><span class="nav-icon">⌂</span> Home <span class="nav-indicator"></span></button>
+          <button class="nav-link" type="button" data-view-target="configure" aria-label="Configure" title="Configure"><span class="nav-icon">◇</span> Configure</button>
+          <button class="nav-link" type="button" data-view-target="monitor" aria-label="Monitor" title="Monitor"><span class="nav-icon">◉</span> Monitor</button>
+          <button class="nav-link" type="button" data-view-target="reports" aria-label="Events and reports" title="Events and reports"><span class="nav-icon">≋</span> Events &amp; reports <span class="nav-count" id="nav-event-count">0</span></button>
+        </nav>
+
+        <div class="side-label source-label">DATA SOURCE</div>
+        <div class="source-summary">
+          <span class="source-pulse" id="source-pulse"></span>
+          <div><strong id="source-summary-title">No active feed</strong><small id="source-summary-subtitle">Connect a video source</small></div>
+        </div>
+
+        <div class="sidebar-bottom">
+          <div class="build-card">
+            <div class="build-top"><span class="build-light"></span> VIDES ENGINE <span class="mono">v1.0</span></div>
+            <p>Vehicle Intelligent Detection &amp; Event System</p>
+            <div class="build-status"><span id="service-dot"></span><span id="service-label">Checking service</span></div>
+          </div>
+          <div class="sidebar-tools" aria-label="VIDES tools">
+            <a class="sidebar-tool" href="https://rishabh-surana.netlify.app/" target="_blank" rel="noopener noreferrer" title="Open developer portfolio"><span class="sidebar-tool-icon">↗</span><span>Developer portfolio</span></a>
+            <button class="sidebar-tool restart-tool" id="restart-app" type="button" title="Restart the VIDES backend"><span class="sidebar-tool-icon">↻</span><span>Restart app</span></button>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div class="crumb"><span>Workspace</span><b>/</b><strong id="view-title">Home</strong></div>
+          <div class="topbar-right">
+            <span class="system-pill"><span class="pill-dot" id="top-status-dot"></span><span id="top-status-label">Connecting</span></span>
+            <span class="top-divider"></span>
+            <span class="date-label" id="today-label"></span>
+          </div>
+        </header>
+
+        <div class="page-wrap">
+          <section class="workspace-view" id="monitor-view" data-view="monitor" hidden>
+          <section class="page-heading">
+            <div>
+              <div class="eyebrow"><span class="eyebrow-line"></span> INTELLIGENT ROAD MONITORING</div>
+              <h1>Traffic overview<span class="heading-period">.</span></h1>
+              <p>See what’s moving, and what needs attention.</p>
+            </div>
+            <button class="export-link" type="button" data-view-target="reports"><span>↗</span> View events &amp; reports</button>
+          </section>
+
+          <section class="metric-grid" aria-label="Live metrics">
+            <article class="metric-card">
+              <div class="metric-top"><span>VEHICLES TRACKED</span><span class="metric-icon green-icon">↗</span></div>
+              <div class="metric-value" id="metric-vehicles">—</div>
+              <div class="metric-foot"><span class="metric-live-dot"></span><span id="vehicle-foot">Waiting for a feed</span></div>
+              <div class="metric-sparkline spark-green" data-series="vehicles"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-top"><span>EVENTS DETECTED</span><span class="metric-icon amber-icon">⌁</span></div>
+              <div class="metric-value" id="metric-events">0</div>
+              <div class="metric-foot"><span class="severity-mini"></span><span id="event-foot">No incidents reported</span></div>
+              <div class="metric-sparkline spark-amber" data-series="events"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-top"><span>AVERAGE SPEED</span><span class="metric-icon blue-icon">◷</span></div>
+              <div class="metric-value"><span id="metric-speed">—</span><small>km/h</small></div>
+              <div class="metric-foot"><span class="speed-limit-tag" id="speed-limit-tag">LIMIT 30 KM/H</span><span id="speed-foot">Across tracked vehicles</span></div>
+              <div class="metric-sparkline spark-blue" data-series="speed"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-top"><span>ENGINE STATUS</span><span class="metric-icon green-icon">⌘</span></div>
+              <div class="metric-value status-value" id="metric-engine">Ready</div>
+              <div class="metric-foot"><span class="engine-mini-dot" id="engine-mini-dot"></span><span id="engine-foot">Model awaiting feed</span></div>
+              <div class="metric-sparkline spark-green" data-series="engine"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            </article>
+          </section>
+
+          <section class="work-grid" id="monitor">
+            <article class="panel monitor-panel">
+              <div class="panel-heading monitor-heading">
+                <div><div class="panel-title-line"><h2>Live monitor</h2><span class="live-label" id="live-label"><i></i> STANDBY</span></div><p>Real-time vehicle detection and tracking</p></div>
+                <div class="panel-actions"><span class="frame-size">640 × 360</span><button class="icon-button" id="refresh-button" aria-label="Refresh service state" title="Refresh service state">↻</button></div>
+              </div>
+
+              <div class="video-stage" id="video-stage">
+                <img id="video-feed" alt="Live processed video feed" />
+                <div class="video-empty" id="video-empty">
+                  <div class="empty-radar"><span></span><i></i><b></b></div>
+                  <strong id="empty-title">Your live view starts here</strong>
+                  <p id="empty-copy">Connect a camera, network stream, or upload a video to begin.</p>
+                  <span class="empty-caption"><i></i> AWAITING VIDEO SOURCE</span>
+                </div>
+                <div class="video-overlay top-overlay"><span class="record-chip"><i></i> <span id="record-state">STANDBY</span></span><span class="overlay-source" id="overlay-source">NO SOURCE SELECTED</span></div>
+                <div class="video-overlay bottom-overlay"><span><i class="overlay-eye">◉</i> <span id="overlay-vehicles">0 TRACKS</span></span><span id="overlay-fps">— FPS</span></div>
+                <div class="video-error" id="video-error" hidden></div>
+              </div>
+
+              <div class="monitor-stats">
+                <div><span class="stat-label">SESSION DURATION</span><strong id="session-duration">00:00:00</strong></div>
+                <div><span class="stat-label">VEHICLE CLASSES</span><strong id="class-summary">—</strong></div>
+                <div><span class="stat-label">SOURCE</span><strong id="session-source">—</strong></div>
+              </div>
+            </article>
+
+            <aside class="right-rail">
+              <article class="panel incident-panel">
+                <div class="panel-heading compact-heading"><div><h2>Incident summary</h2><p>Signals from this session</p></div><span class="incident-total" id="incident-total">0</span></div>
+                <div class="incident-list">
+                  <div class="incident-row"><span class="incident-symbol overspeed-symbol">↗</span><span class="incident-name">Overspeeding</span><strong id="count-overspeed">0</strong></div>
+                  <div class="incident-row"><span class="incident-symbol motion-symbol">⇄</span><span class="incident-name">Wrong direction</span><strong id="count-opposite">0</strong></div>
+                  <div class="incident-row"><span class="incident-symbol stalled-symbol">Ⅱ</span><span class="incident-name">Stalled vehicle</span><strong id="count-stalling">0</strong></div>
+                  <div class="incident-row"><span class="incident-symbol accident-symbol">✳</span><span class="incident-name">Possible collision</span><strong id="count-accident">0</strong></div>
+                  <div class="incident-row"><span class="incident-symbol heavy-symbol">▰</span><span class="incident-name">Heavy vehicle</span><strong id="count-heavy">0</strong></div>
+                </div>
+                <div class="incident-foot"><span class="incident-foot-dot"></span><span id="incident-foot-text">Listening for traffic events</span></div>
+              </article>
+
+              <article class="panel system-panel">
+                <div class="panel-heading compact-heading"><div><h2>System health</h2><p>Detection pipeline</p></div><span class="health-ring" id="health-ring">✓</span></div>
+                <div class="health-overview"><div class="health-icon">⌘</div><div><strong id="health-title">Checking engine</strong><small id="health-subtitle">Connecting to VIDES API…</small></div></div>
+                <div class="health-items">
+                  <div><span>API service</span><span class="health-state" id="health-api"><i></i> Checking</span></div>
+                  <div><span>Detection model</span><span class="health-state" id="health-model"><i></i> Checking</span></div>
+                  <div><span>YOLO pipeline</span><span class="health-state" id="health-yolo"><i></i> Checking</span></div>
+                </div>
+              </article>
+
+              <article class="tip-card"><span class="tip-icon">✳</span><div><strong>Detection notes</strong><p>Overspeed, wrong-way, stalling, collision, and heavy vehicle events are evaluated from the active feed.</p></div></article>
+            </aside>
+          </section>
+          </section>
+
+          <section class="workspace-view" id="configure-view" data-view="configure" hidden>
+          <section class="page-heading">
+            <div><div class="eyebrow"><span class="eyebrow-line"></span> DETECTION WORKSPACE</div><h1>Configure detection<span class="heading-period">.</span></h1><p>Choose a feed, set its road zone, and tune the traffic profile.</p></div>
+            <button class="export-link" type="button" data-view-target="monitor"><span>◉</span> Back to monitor</button>
+          </section>
+
+          <section class="setup-checklist panel" aria-labelledby="setup-checklist-title">
+            <div class="setup-checklist-heading"><div><span class="control-kicker">BEFORE MONITORING</span><h2 id="setup-checklist-title">Prepare this detection session</h2></div><strong id="setup-readiness-summary" aria-live="polite">Choose a video source to begin.</strong></div>
+            <ol class="setup-steps">
+              <li class="setup-step" id="setup-source-step"><span class="setup-step-number">01</span><span class="setup-step-copy"><strong>Choose source</strong><small>Camera, stream, or uploaded video</small></span><span class="setup-step-state" id="setup-source-state">NEXT</span></li>
+              <li class="setup-step" id="setup-frame-step"><span class="setup-step-number">02</span><span class="setup-step-copy"><strong>Preview a frame</strong><small>Confirm the selected feed is usable</small></span><span class="setup-step-state" id="setup-frame-state">WAITING</span></li>
+              <li class="setup-step" id="setup-zone-step"><span class="setup-step-number">03</span><span class="setup-step-copy"><strong>Apply detection zone</strong><small>Check the region against the frame</small></span><span class="setup-step-state" id="setup-zone-state">WAITING</span></li>
+              <li class="setup-step" id="setup-model-step"><span class="setup-step-number">04</span><span class="setup-step-copy"><strong>Load detection model</strong><small>One model must finish loading</small></span><span class="setup-step-state" id="setup-model-state">WAITING</span></li>
+              <li class="setup-step" id="setup-traffic-step"><span class="setup-step-number">05</span><span class="setup-step-copy"><strong>Apply traffic profile</strong><small>Heading, road length, speed, confidence</small></span><span class="setup-step-state" id="setup-traffic-state">WAITING</span></li>
+            </ol>
+          </section>
+
+          <article class="panel source-panel">
+            <div class="source-controls">
+              <div class="source-control-head"><div><span class="control-kicker">VIDEO INPUT</span><strong>Choose a source</strong></div><span class="secure-label"><span>⌑</span> PROCESSING ON THIS SERVER</span></div>
+              <div class="source-tabs" role="tablist" aria-label="Video source">
+                <button class="source-tab selected" type="button" role="tab" aria-selected="true" data-source="camera"><span>◎</span> Camera</button>
+                <button class="source-tab" type="button" role="tab" aria-selected="false" data-source="rtsp"><span>⌁</span> Stream URL</button>
+                <button class="source-tab" type="button" role="tab" aria-selected="false" data-source="upload"><span>↑</span> Video file</button>
+              </div>
+
+              <div class="source-input-row" id="camera-input-row">
+                <label class="input-group"><span>CAMERA DEVICE</span><select id="camera-index"><option value="0">Camera 0</option><option value="1">Camera 1</option><option value="2">Camera 2</option></select></label>
+                <p class="input-hint">Uses a camera connected to the machine running the VIDES backend.</p>
+              </div>
+              <div class="source-input-row" id="rtsp-input-row" hidden>
+                <label class="input-group grow"><span>NETWORK STREAM URL</span><input id="rtsp-url" type="url" placeholder="rtsp://192.168.1.20:554/stream" autocomplete="off" /></label>
+                <button class="configured-feed" id="configured-feed-button" type="button" hidden>Use configured feed</button>
+              </div>
+              <div class="source-input-row upload-row" id="upload-input-row" hidden>
+                <button class="upload-drop" id="upload-drop" type="button"><span class="upload-icon">↑</span><span><strong id="upload-title">Choose a video file</strong><small id="upload-subtitle">MP4, AVI, MOV, MKV · up to 500 MB</small></span><span class="browse-link">Browse</span></button>
+                <input id="video-file" type="file" accept=".mp4,.avi,.mov,.mkv,.webm,.m4v" hidden />
+                <div class="upload-progress" id="upload-progress" hidden><span></span></div>
+              </div>
+
+              <div class="api-note" id="api-note" hidden></div>
+            </div>
+          </article>
+
+          <section class="panel roi-config-panel" id="configurator">
+            <div class="panel-heading roi-heading">
+              <div><div class="panel-title-line"><h2>Detection zone configurator</h2><span class="roi-state" id="roi-state">SAVED REGION</span></div><p>Choose exactly where VIDES should evaluate vehicles on the frame.</p></div>
+              <span class="frame-size" id="roi-frame-size">640 × 360 FRAME</span>
+            </div>
+            <div class="roi-config-layout">
+              <div class="roi-editor-column">
+                <div class="roi-editor-toolbar"><span id="roi-source-label">Capture a frame from the selected source</span><button class="capture-frame-button" id="capture-frame"><span>▣</span> Capture frame</button></div>
+                <div class="upload-frame-selector" id="upload-frame-selector" hidden>
+                  <div class="selector-label-row"><span>SELECT VIDEO FRAME</span><strong id="video-frame-time">00:00.0</strong></div>
+                  <input id="video-frame-slider" type="range" min="0" max="0" step="1" value="0" aria-label="Select a frame from the uploaded video" />
+                  <div class="selector-scale"><span>START</span><span id="video-frame-number">FRAME 0</span><span id="video-duration">00:00</span></div>
+                </div>
+                <div class="roi-canvas-wrap"><canvas id="roi-canvas" width="640" height="360" aria-label="Drag the four green handles to configure a perspective-shaped detection zone"></canvas><div class="roi-canvas-empty" id="roi-canvas-empty"><span>◈</span><strong id="roi-empty-title">Frame preview</strong><small id="roi-empty-copy">Select a source, then capture a frame to configure the region on the real view.</small></div></div>
+                <div class="roi-canvas-caption"><span><i class="roi-caption-dot"></i> VEHICLE DETECTION AREA</span><span>Four-corner perspective zone · drag beyond frame edges</span></div>
+              </div>
+              <aside class="roi-settings-column">
+                <div class="roi-mode-card"><span class="roi-mode-icon">⌖</span><div><strong>Perspective polygon</strong><small>Four corners · ground-plane mapping</small></div><span class="roi-mode-check">✓</span></div>
+                <p class="roi-instructions">Set each corner on the road boundary. Use the padded editor around the preview to place corners up to 25% beyond the frame when the road continues off-screen.</p>
+                <div class="roi-coordinates-head"><span>CONTROL POINTS</span><span>640 × 360 PX</span></div>
+                <div class="roi-points-list" id="roi-points-list"></div>
+                <div class="model-config">
+                  <div class="model-config-heading"><span>DETECTION MODEL</span><span id="model-config-state">Checking</span></div>
+                  <div class="model-config-controls"><select id="detector-model" aria-label="Detection model"></select><button id="load-model" type="button" disabled>Load model</button></div>
+                  <p id="model-config-note">Select a model and wait for it to load before starting detection.</p>
+                </div>
+                <div class="traffic-profile">
+                  <div class="traffic-profile-heading"><div><span>TRAFFIC PROFILE</span><small>Settings used by live detection</small></div><span class="traffic-state" id="traffic-state">SAVED</span></div>
+                  <div class="flow-direction-label">EXPECTED FLOW <small>Rotate the arrow to match the road heading</small></div>
+                  <div class="flow-dial-row">
+                    <div class="flow-dial" id="flow-dial" role="slider" tabindex="0" aria-label="Expected traffic direction" aria-valuemin="0" aria-valuemax="359" aria-valuenow="0">
+                      <svg viewBox="0 0 140 140" aria-hidden="true">
+                        <circle class="flow-dial-track" cx="70" cy="70" r="54" />
+                        <circle class="flow-dial-inner" cx="70" cy="70" r="39" />
+                        <path class="flow-dial-ticks" d="M70 11v8 M70 121v8 M11 70h8 M121 70h8 M28.3 28.3l5.7 5.7 M106 106l5.7 5.7 M111.7 28.3l-5.7 5.7 M34 106l-5.7 5.7" />
+                        <text class="flow-dial-cardinal" x="70" y="9" text-anchor="middle">N</text><text class="flow-dial-cardinal" x="132" y="73" text-anchor="middle">E</text><text class="flow-dial-cardinal" x="70" y="139" text-anchor="middle">S</text><text class="flow-dial-cardinal" x="8" y="73" text-anchor="middle">W</text>
+                        <g class="flow-arrow" id="flow-arrow" transform="rotate(0 70 70)"><path d="M70 25 61 49l9-5 9 5-9-24Z" /><path d="M70 43v42" /></g>
+                        <circle class="flow-dial-hub" cx="70" cy="70" r="5" />
+                      </svg>
+                    </div>
+                    <div class="flow-angle-panel"><span>FLOW HEADING</span><strong id="flow-angle-value">0°</strong><label for="flow-angle">ANGLE <span>0° UP · CLOCKWISE</span></label><input type="number" id="flow-angle" min="0" max="359" step="1" value="0" /><small>90° right · 180° down · 270° left</small></div>
+                  </div>
+                  <label class="traffic-number-field"><span>KNOWN ROAD LENGTH <small>Along the selected flow direction</small></span><span class="traffic-input-wrap"><input type="number" id="road-length" min="1" max="10000" step="1" value="50" /><b>m</b></span></label>
+                  <label class="traffic-number-field"><span>SPEED LIMIT <small>Threshold for overspeed events</small></span><span class="traffic-input-wrap"><input type="number" id="speed-limit" min="1" max="300" value="30" /><b>km/h</b></span></label>
+                  <label class="confidence-field"><span>DETECTION CONFIDENCE <b id="confidence-value">60%</b></span><input type="range" id="detection-confidence" min="0.1" max="0.95" step="0.05" value="0.6" /><small>Lower values detect more vehicles; higher values are more selective.</small></label>
+                  <div class="traffic-calibration-note">Speed is calibrated against the known road length across this perspective region.</div>
+                </div>
+                <div class="roi-action-row"><button class="roi-reset-button" id="reset-roi">Reset to default</button><button class="roi-save-button" id="save-roi" disabled>Apply region</button></div>
+                <button class="traffic-save-button" id="save-traffic" disabled>Apply traffic settings</button>
+                <div class="control-footer session-actions">
+                  <p>Start detection once the source, frame, region, and traffic profile are ready.</p>
+                  <div class="control-buttons"><button class="stop-button" id="stop-button" type="button" disabled>Stop session</button><button class="start-button" id="start-button" type="button" disabled><span class="start-icon">▶</span> Start detection</button></div>
+                </div>
+                <div class="roi-feedback" id="roi-feedback" role="status">Saved region is active for the next frame.</div>
+              </aside>
+            </div>
+          </section>
+
+          </section>
+
+          <section class="workspace-view" id="reports-view" data-view="reports" hidden>
+          <section class="page-heading">
+            <div><div class="eyebrow"><span class="eyebrow-line"></span> SESSION OUTPUT</div><h1>Events &amp; reports<span class="heading-period">.</span></h1><p>Review detection results and download a session report.</p></div>
+            <button class="export-link" type="button" data-view-target="monitor"><span>◉</span> Back to monitor</button>
+          </section>
+
+          <section class="panel event-panel" id="events">
+            <div class="panel-heading event-heading"><div><div class="panel-title-line"><h2>Session events</h2><span class="event-total-chip" id="event-total-chip">0 total</span></div><p>Every recorded condition from the current session, newest first</p></div>
+              <div class="event-heading-actions"><label class="report-format"><span>FORMAT</span><select id="report-format" aria-label="Report format"><option value="csv">CSV</option><option value="json">JSON</option></select></label><button class="download-report-button" id="download-report" disabled><span>↓</span> Download report</button><div class="event-filters" role="group" aria-label="Filter events"><button class="event-filter active" data-filter="all">All events</button><button class="event-filter" data-filter="priority">Priority</button><button class="event-filter" data-filter="overspeed">Speed</button></div></div>
+            </div>
+            <div class="event-table-wrap">
+              <table class="event-table"><thead><tr><th>EVENT</th><th>VEHICLE</th><th>DETAIL</th><th>TIME</th><th>LEVEL</th></tr></thead><tbody id="event-table-body"><tr class="empty-event-row"><td colspan="5"><div class="table-empty"><span>≋</span><strong>No events yet</strong><small>When VIDES detects an event, it will appear here.</small></div></td></tr></tbody></table>
+            </div>
+            <div class="event-table-footer"><span id="event-footer-copy">No session records yet</span><span class="table-live"><i></i> UPDATING LIVE</span></div>
+          </section>
+          </section>
+
+          <section class="workspace-view active" id="docs-view" data-view="docs">
+            <section class="docs-hero">
+              <div class="docs-hero-copy">
+                <span class="docs-hero-kicker"><i></i> VIDES FIELD GUIDE <b>·</b> COMPUTER VISION MADE CLEAR</span>
+                <div class="docs-brand-context"><span><strong>VIDES</strong> · Vehicle Intelligent Detection &amp; Event System</span><span>Part of <strong>ATMS</strong> · Advanced Traffic Management System</span></div>
+                <h1>From camera pixels<br /><em>to traffic insight.</em></h1>
+                <p>See how VIDES finds vehicles, follows them across frames, estimates speed, and turns selected traffic conditions into reviewable event records.</p>
+                <div class="docs-hero-actions"><button class="docs-primary-action" type="button" data-view-target="configure">Set up a detection view <span>→</span></button><button class="docs-secondary-action" type="button" data-view-target="reports">Explore event reports</button></div>
+                <div class="docs-tech-tags"><span>Python</span><span>OpenCV</span><span>YOLOv8</span><span>DeepSORT</span></div>
+              </div>
+              <div class="docs-hero-visual" aria-label="Illustration showing vehicle detection in a camera frame">
+                <div class="docs-visual-topline"><span>CAMERA FRAME</span><span class="docs-live-tag"><i></i> CV PIPELINE</span></div>
+                <svg class="docs-road-illustration" viewBox="0 0 440 250" role="img" aria-label="A perspective road zone with tracked vehicle boxes">
+                  <defs><linearGradient id="docs-road" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#234353"/><stop offset="1" stop-color="#102a37"/></linearGradient><linearGradient id="docs-zone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5bd885" stop-opacity=".28"/><stop offset="1" stop-color="#5bd885" stop-opacity=".04"/></linearGradient></defs>
+                  <rect x="12" y="12" width="416" height="226" rx="12" fill="#0d202b" stroke="#31505c"/>
+                  <path d="M166 26 67 226h306L274 26Z" fill="url(#docs-road)" stroke="#476572" stroke-width="2"/>
+                  <path d="m216 31-12 48m-11 29-15 57m-11 28-8 31m87-193 12 48m11 29 15 57m11 28 8 31" stroke="#bdd7cc" stroke-opacity=".46" stroke-width="3" stroke-dasharray="12 13"/>
+                  <path d="M139 78 298 78 345 204 94 204Z" fill="url(#docs-zone)" stroke="#63d989" stroke-width="2" stroke-dasharray="6 5"/>
+                  <circle cx="139" cy="78" r="5" fill="#eaffef" stroke="#4ad378" stroke-width="3"/><circle cx="298" cy="78" r="5" fill="#eaffef" stroke="#4ad378" stroke-width="3"/><circle cx="345" cy="204" r="5" fill="#eaffef" stroke="#4ad378" stroke-width="3"/><circle cx="94" cy="204" r="5" fill="#eaffef" stroke="#4ad378" stroke-width="3"/>
+                  <rect x="206" y="117" width="46" height="52" rx="4" fill="#52c879" fill-opacity=".12" stroke="#63df8d" stroke-width="2"/><rect x="206" y="104" width="76" height="16" rx="4" fill="#43bd6e"/><text x="213" y="115" fill="#082315" font-size="9" font-family="monospace">ID 24 · CAR</text>
+                  <path d="M229 150v-33m0 0-7 9m7-9 7 9" fill="none" stroke="#b2ffd0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <rect x="306" y="44" width="93" height="26" rx="6" fill="#173b34" stroke="#2e6a4a"/><circle cx="319" cy="57" r="4" fill="#59d483"/><text x="329" y="60" fill="#d6f2df" font-size="9" font-family="monospace">TRACKING</text>
+                </svg>
+                <div class="docs-visual-footer"><span>ZONE → TRACKS → EVENTS</span><span>LIVE / RECORDED</span></div>
+              </div>
+            </section>
+
+            <section class="docs-journey" aria-label="VIDES workflow">
+              <article><span class="docs-journey-index">01</span><div><strong>Configure</strong><p>Choose a source, road zone, model, and traffic settings.</p></div><span class="docs-journey-arrow">→</span></article>
+              <article><span class="docs-journey-index">02</span><div><strong>Monitor</strong><p>Watch annotated video, vehicle tracks, speed, and status.</p></div><span class="docs-journey-arrow">→</span></article>
+              <article><span class="docs-journey-index">03</span><div><strong>Review</strong><p>Filter the event log and export the full session report.</p></div></article>
+            </section>
+
+            <section class="docs-setup panel">
+              <div class="docs-section-heading"><div><span class="docs-section-kicker">QUICK START</span><h2>Configure a camera view</h2><p>Complete these steps in Configure before you start a detection session.</p></div><button class="docs-small-action" type="button" data-view-target="configure">Open Configure <span>→</span></button></div>
+              <div class="docs-setup-grid">
+                <article><span>01 · SOURCE</span><h3>Choose video</h3><p>Select a camera connected to the backend, a network stream URL or configured feed, or an uploaded clip. For uploads, choose a frame with the timeline.</p></article>
+                <article><span>02 · PREVIEW</span><h3>Capture a frame</h3><p>Capture the selected source to show the actual camera view in the road-zone editor.</p></article>
+                <article><span>03 · ROAD ZONE</span><h3>Mark the road</h3><p>Place four ordered corners around the road. The padded canvas lets corners extend up to 25% outside the image; points cannot cross.</p></article>
+                <article><span>04 · MODEL</span><h3>Wait until ready</h3><p>Choose an included YOLOv8 model. VIDES loads one model at a time and enables Start when it is ready.</p></article>
+                <article><span>05 · TRAFFIC</span><h3>Set direction and scale</h3><p>Rotate the arrow, enter a known road length in that direction, choose a speed limit and confidence, then apply settings.</p></article>
+                <article><span>06 · MONITOR</span><h3>Start detection</h3><p>Start opens Monitor. Changing pages does not stop the active session; use Stop session when processing should end.</p></article>
+              </div>
+            </section>
+
+            <section class="docs-learning panel">
+              <div class="docs-section-heading"><div><span class="docs-section-kicker">UNDER THE HOOD</span><h2>Explore the vision pipeline</h2><p>Choose a topic. Start with the visual overview, then open the math and event rules when you want more detail.</p></div><span class="docs-section-mark">CV / 01</span></div>
+              <div class="docs-tabs" role="tablist" aria-label="Computer vision handbook topics">
+                <button type="button" role="tab" id="docs-tab-pipeline" aria-controls="docs-panel-pipeline" aria-selected="true" tabindex="0" data-doc-tab="pipeline"><span>01</span> Detection pipeline</button>
+                <button type="button" role="tab" id="docs-tab-geometry" aria-controls="docs-panel-geometry" aria-selected="false" tabindex="-1" data-doc-tab="geometry"><span>02</span> Geometry &amp; speed</button>
+                <button type="button" role="tab" id="docs-tab-logic" aria-controls="docs-panel-logic" aria-selected="false" tabindex="-1" data-doc-tab="logic"><span>03</span> Event logic</button>
+              </div>
+
+              <div class="docs-tab-panel" id="docs-panel-pipeline" role="tabpanel" aria-labelledby="docs-tab-pipeline" tabindex="0" data-doc-panel="pipeline">
+                <div class="docs-pipeline" aria-label="Video processing stages">
+                  <article class="docs-pipeline-stage"><span class="docs-stage-icon source-icon">▣</span><span class="docs-stage-number">INPUT / 01</span><h3>Video frame</h3><p>Camera, stream, or uploaded clip arrives as images.</p></article><span class="docs-pipeline-arrow">→</span>
+                  <article class="docs-pipeline-stage"><span class="docs-stage-icon yolo-icon">◎</span><span class="docs-stage-number">DETECT / 02</span><h3>YOLOv8</h3><p>Finds vehicle boxes, labels, and confidence scores.</p></article><span class="docs-pipeline-arrow">→</span>
+                  <article class="docs-pipeline-stage"><span class="docs-stage-icon track-icon">⌖</span><span class="docs-stage-number">TRACK / 03</span><h3>DeepSORT</h3><p>Associates detections over time to keep vehicle IDs.</p></article><span class="docs-pipeline-arrow">→</span>
+                  <article class="docs-pipeline-stage"><span class="docs-stage-icon zone-icon">◇</span><span class="docs-stage-number">MAP / 04</span><h3>Road zone</h3><p>Filters the selected area and maps it to a top-down plane.</p></article><span class="docs-pipeline-arrow">→</span>
+                  <article class="docs-pipeline-stage"><span class="docs-stage-icon event-icon">≋</span><span class="docs-stage-number">RECORD / 05</span><h3>Event rules</h3><p>Checks speed, direction, stopping, overlap, and size.</p></article>
+                </div>
+                <div class="docs-explainer-strip"><span class="docs-explainer-badge">IN SHORT</span><p>Detection asks <b>“what is in this frame?”</b> Tracking asks <b>“is this the same vehicle as before?”</b> The event checks use those answers across time.</p></div>
+              </div>
+
+              <div class="docs-tab-panel" id="docs-panel-geometry" role="tabpanel" aria-labelledby="docs-tab-geometry" tabindex="0" data-doc-panel="geometry" hidden>
+                <div class="docs-formula-grid">
+                  <article class="docs-formula-card"><span class="docs-formula-index">A / PERSPECTIVE</span><h3>Flatten the road</h3><code class="docs-equation">p′ ∼ H · p</code><p>A homography matrix <b>H</b> maps a point <b>p</b> from the camera image to point <b>p′</b> on a flattened road plane. The four zone corners define this mapping.</p><details><summary>What does this mean?</summary><p>Nearby road edges look larger than distant ones in a camera image. Mapping the selected quadrilateral to a rectangle makes movement easier to measure consistently.</p></details></article>
+                  <article class="docs-formula-card"><span class="docs-formula-index">B / SCALE</span><h3>Convert pixels to metres</h3><code class="docs-equation">S = L / D<sub>px</sub></code><p><b>L</b> is the known road length represented by the zone along the arrow direction. <b>D<sub>px</sub></b> is that span on the flattened plane. <b>S</b> is metres per pixel.</p><details><summary>Where does the road length fit?</summary><p>Measure the road length represented by the full zone in the direction of traffic and enter it in Configure. VIDES estimates the matching pixel span from the flattened view and flow angle.</p></details></article>
+                  <article class="docs-formula-card"><span class="docs-formula-index">C / SPEED</span><h3>Estimate vehicle speed</h3><code class="docs-equation docs-equation-small">v<sub>km/h</sub> = (Δp × S / Δt) × 3.6</code><p><b>Δp</b> is movement in projected pixels, <b>S</b> converts pixels to metres, and <b>Δt</b> is elapsed time. The factor <b>3.6</b> converts metres per second to km/h.</p><details><summary>Why is it an estimate?</summary><p>Speed quality depends on the zone corners, measured distance, frame rate, perspective, and tracking stability. VIDES is a camera-based estimate, not a calibrated road sensor.</p></details></article>
+                </div>
+                <div class="docs-formula-note"><span>FLOW VECTOR</span><code>f(θ) = (sin θ, −cos θ)</code><p>VIDES uses this direction for comparison: 0° points up, 90° right, 180° down, and 270° left.</p></div>
+              </div>
+
+              <div class="docs-tab-panel" id="docs-panel-logic" role="tabpanel" aria-labelledby="docs-tab-logic" tabindex="0" data-doc-panel="logic" hidden>
+                <div class="docs-rule-grid">
+                  <article class="docs-rule-card overspeed-rule"><span class="docs-rule-severity">HIGH</span><h3>Overspeed</h3><p>Estimated speed rises above the configured speed limit. The event includes both the measured speed and limit; each vehicle track is recorded once.</p><span class="docs-rule-test">speed &gt; speed limit</span></article>
+                  <article class="docs-rule-card direction-rule"><span class="docs-rule-severity">HIGH</span><h3>Wrong direction</h3><p>After enough tracked positions, movement is strongly opposite to the expected flow arrow. Each track is recorded once.</p><span class="docs-rule-test">cos(angle) &lt; −0.75</span></article>
+                  <article class="docs-rule-card stalled-rule"><span class="docs-rule-severity">HIGH</span><h3>Stalled vehicle</h3><p>A tracked vehicle remains within about one metre for at least five seconds inside the selected area.</p><span class="docs-rule-test">distance &lt; 1 m · time ≥ 5 s</span></article>
+                  <article class="docs-rule-card collision-rule"><span class="docs-rule-severity critical-severity">CRITICAL</span><h3>Possible collision</h3><p>Two vehicles already marked as stalled have strongly overlapping detection boxes. It is a prompt for review, not confirmation of a crash.</p><span class="docs-rule-test">box overlap (IoU) &gt; 0.5</span></article>
+                  <article class="docs-rule-card heavy-rule"><span class="docs-rule-severity medium-severity">MEDIUM</span><h3>Heavy vehicle</h3><p>A detected truck has a calibrated bounding-box diagonal greater than six metres.</p><span class="docs-rule-test">estimated diagonal &gt; 6 m</span></article>
+                </div>
+                <div class="docs-explainer-strip"><span class="docs-explainer-badge">EVENT RECORD</span><p>Each record contains a unique ID, event type, vehicle track ID(s), severity, timestamp, and an explanation. Collision records include both vehicle IDs.</p></div>
+              </div>
+            </section>
+
+            <section class="docs-section-block">
+              <div class="docs-section-heading docs-section-heading-outside"><div><span class="docs-section-kicker">TOOLS &amp; MODEL CHOICES</span><h2>Learn the parts behind detection</h2><p>The active dashboard pipeline and the companion research models have different jobs.</p></div><span class="docs-section-mark">CV / 02</span></div>
+              <div class="docs-tech-grid">
+                <article class="docs-tech-card"><span class="docs-tech-symbol">Y</span><span class="docs-tech-tag">ACTIVE DETECTOR</span><h3>YOLOv8</h3><p>Looks at one frame and predicts vehicle locations, classes, and confidence. The default VIDES weights are <code>Custom_yolov8m.pt</code>.</p><details><summary>Why confidence matters</summary><p>A lower threshold accepts weaker predictions and may find more vehicles with more false alarms. A higher threshold is more selective and may miss partly hidden vehicles.</p></details></article>
+                <article class="docs-tech-card"><span class="docs-tech-symbol track-symbol">T</span><span class="docs-tech-tag">IDENTITY OVER TIME</span><h3>DeepSORT</h3><p>Matches new boxes to recent tracks so a vehicle can keep the same ID from frame to frame.</p><details><summary>How matching works</summary><p>DeepSORT combines motion prediction and appearance features. VIDES uses its MobileNet embedder when available and has an HSV feature fallback.</p></details></article>
+                <article class="docs-tech-card"><span class="docs-tech-symbol cv-symbol">CV</span><span class="docs-tech-tag">VIDEO &amp; GEOMETRY</span><h3>OpenCV + BEV</h3><p>OpenCV reads and draws video frames. A perspective transform turns the selected road shape into a bird’s-eye view for measuring movement.</p><details><summary>What is a bird’s-eye view?</summary><p>It is a top-down representation of the road area. It reduces perspective distortion for the system’s movement and speed calculations.</p></details></article>
+              </div>
+              <div class="docs-runtime-strip"><span>APPLICATION &amp; DATA LAYER</span><b>Python</b><b>FastAPI</b><b>Uvicorn</b><b>NumPy</b><b>Pandas</b><b>HTML · CSS · JavaScript</b></div>
+            </section>
+
+            <section class="docs-model-lab panel">
+              <div class="docs-section-heading"><div><span class="docs-section-kicker">MODEL WORKBENCH</span><h2>Custom models, with context</h2><p>VIDES includes a selectable YOLOv8 detector. These related projects show other ways to approach vehicle vision.</p></div><span class="docs-section-mark">LEARN / 03</span></div>
+              <div class="docs-model-grid">
+                <article class="docs-model-card active-model-card"><div class="docs-model-top"><span>USED IN THIS DASHBOARD</span><i>ACTIVE</i></div><h3>VIDES custom YOLOv8</h3><p>A one-stage detector predicts boxes and labels directly from an image. It is the live model family in the current application.</p><details><summary>Model selection in VIDES</summary><p>The default is <code>models/Custom_yolov8m.pt</code>. Configure can load another included <code>.pt</code> file. VIDES releases the old model and waits for the new one to finish loading; only one is active at a time.</p></details></article>
+                <article class="docs-model-card"><div class="docs-model-top"><span>EDUCATIONAL RESEARCH</span><i>SEPARATE</i></div><h3>Faster R-CNN</h3><p>A two-stage detector first proposes candidate regions, then classifies and refines them. The custom vehicle model is trained and evaluated separately from the live YOLOv8 pipeline.</p><a class="docs-reference-link" href="https://github.com/Rishabh-1029/ATMS-project/tree/main/Custom%20model%20for%20Object%20Detection" target="_blank" rel="noopener noreferrer">Explore the Faster R-CNN project <span>↗</span></a></article>
+                <article class="docs-model-card"><div class="docs-model-top"><span>COMPANION PROJECT</span><i>ANPR</i></div><h3>Number-plate recognition</h3><p>The separate ANPR project combines vehicle detection with a YOLOv8 plate detector. It focuses on plate localization across different vehicle types and plate formats, and reports its own precision and recall results.</p><a class="docs-reference-link" href="https://github.com/Rishabh-1029/ANPR" target="_blank" rel="noopener noreferrer">Explore the ANPR project <span>↗</span></a></article>
+              </div>
+            </section>
+
+            <section class="docs-report-banner"><div><span class="docs-section-kicker">FROM DETECTION TO DOCUMENTATION</span><h2>Every event stays reviewable.</h2><p>Events &amp; reports contains every event from the active session, newest first. Download CSV for spreadsheets or JSON for structured analysis. Session data is in memory and clears when a new session starts or VIDES restarts.</p></div><button type="button" data-view-target="reports">Open session reports <span>→</span></button></section>
+          </section>
+
+          <footer class="page-footer"><span>VIDES <b>·</b> Vehicle Intelligent Detection &amp; Event System</span><span>Live monitoring console <i></i></span></footer>
+        </div>
+      </main>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="/app.js" defer></script>
+  </body>
+</html>
