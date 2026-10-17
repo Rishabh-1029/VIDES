@@ -62,6 +62,26 @@ function showToast(message, isError = false) {
   ui.toastTimer = setTimeout(() => toast.classList.remove("show"), 3600);
 }
 
+function applyTheme(theme, persist = true) {
+  const dark = theme === "dark";
+  document.documentElement.dataset.theme = dark ? "dark" : "light";
+  const toggle = $("#theme-toggle");
+  const nextLabel = dark ? "Switch to light theme" : "Switch to dark theme";
+  document.documentElement.style.colorScheme = dark ? "dark" : "light";
+  if (toggle) {
+    toggle.setAttribute("aria-label", nextLabel);
+    toggle.setAttribute("title", nextLabel);
+    toggle.setAttribute("aria-pressed", String(dark));
+    toggle.querySelector(".theme-toggle-label").textContent = dark ? "Light mode" : "Dark mode";
+  }
+  $("#theme-color")?.setAttribute("content", dark ? "#0c151e" : "#f5f7f8");
+  if (persist) {
+    try {
+      localStorage.setItem("vides-theme", dark ? "dark" : "light");
+    } catch (_) {}
+  }
+}
+
 function activateWorkspaceView(viewName, updateHistory = true) {
   const views = {
     monitor: "Monitor",
@@ -1292,6 +1312,10 @@ function bindEvents() {
 }
 
 function boot() {
+  $("#theme-toggle")?.addEventListener("click", () => {
+    applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+  });
+  applyTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light", false);
   $("#today-label").textContent = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" }).format(new Date());
   if (ui.image.complete && ui.image.naturalWidth) ui.image.classList.add("visible");
   bindRoiCanvas();

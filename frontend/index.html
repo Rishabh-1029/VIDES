@@ -3,14 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0a1420" />
+    <meta id="theme-color" name="theme-color" content="#0a1420" />
     <meta name="description" content="VIDES vehicle detection and traffic event monitoring dashboard." />
     <title>VIDES — Traffic intelligence</title>
     <link rel="icon" type="image/svg+xml" href="/vides-favicon.svg" />
+    <script>
+      try {
+        if (localStorage.getItem("vides-theme") === "dark") document.documentElement.dataset.theme = "dark";
+      } catch (_) {}
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles.css?v=configure-layout-1" />
   </head>
   <body>
     <div class="app-shell">
@@ -62,6 +67,14 @@
             <span class="system-pill"><span class="pill-dot" id="top-status-dot"></span><span id="top-status-label">Connecting</span></span>
             <span class="top-divider"></span>
             <span class="date-label" id="today-label"></span>
+            <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark theme" title="Switch to dark theme" aria-pressed="false">
+              <span class="theme-toggle-icon" aria-hidden="true">
+                <svg class="theme-moon" viewBox="0 0 24 24"><path d="M20.2 15.3A8.4 8.4 0 0 1 8.7 3.8 8.5 8.5 0 1 0 20.2 15.3Z" /></svg>
+                <svg class="theme-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.8" /><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" /></svg>
+              </span>
+              <span class="theme-toggle-label">Dark mode</span>
+              <span class="theme-toggle-track" aria-hidden="true"><i></i></span>
+            </button>
           </div>
         </header>
 
@@ -161,23 +174,16 @@
           <section class="workspace-view" id="configure-view" data-view="configure" hidden>
           <section class="page-heading">
             <div><div class="eyebrow"><span class="eyebrow-line"></span> DETECTION WORKSPACE</div><h1>Configure detection<span class="heading-period">.</span></h1><p>Choose a feed, set its road zone, and tune the traffic profile.</p></div>
-            <button class="export-link" type="button" data-view-target="monitor"><span>◉</span> Back to monitor</button>
           </section>
 
-          <section class="setup-checklist panel" aria-labelledby="setup-checklist-title">
-            <div class="setup-checklist-heading"><div><span class="control-kicker">BEFORE MONITORING</span><h2 id="setup-checklist-title">Prepare this detection session</h2></div><strong id="setup-readiness-summary" aria-live="polite">Choose a video source to begin.</strong></div>
-            <ol class="setup-steps">
-              <li class="setup-step" id="setup-source-step"><span class="setup-step-number">01</span><span class="setup-step-copy"><strong>Choose source</strong><small>Camera, stream, or uploaded video</small></span><span class="setup-step-state" id="setup-source-state">NEXT</span></li>
-              <li class="setup-step" id="setup-frame-step"><span class="setup-step-number">02</span><span class="setup-step-copy"><strong>Preview a frame</strong><small>Confirm the selected feed is usable</small></span><span class="setup-step-state" id="setup-frame-state">WAITING</span></li>
-              <li class="setup-step" id="setup-zone-step"><span class="setup-step-number">03</span><span class="setup-step-copy"><strong>Apply detection zone</strong><small>Check the region against the frame</small></span><span class="setup-step-state" id="setup-zone-state">WAITING</span></li>
-              <li class="setup-step" id="setup-model-step"><span class="setup-step-number">04</span><span class="setup-step-copy"><strong>Load detection model</strong><small>One model must finish loading</small></span><span class="setup-step-state" id="setup-model-state">WAITING</span></li>
-              <li class="setup-step" id="setup-traffic-step"><span class="setup-step-number">05</span><span class="setup-step-copy"><strong>Apply traffic profile</strong><small>Heading, road length, speed, confidence</small></span><span class="setup-step-state" id="setup-traffic-state">WAITING</span></li>
-            </ol>
+          <section class="config-readiness panel" aria-label="Session readiness">
+            <span class="config-readiness-icon" aria-hidden="true">◉</span>
+            <div><span class="control-kicker">SESSION READINESS</span><p id="setup-readiness-summary" aria-live="polite">Choose a video source to begin.</p></div>
           </section>
 
           <article class="panel source-panel">
             <div class="source-controls">
-              <div class="source-control-head"><div><span class="control-kicker">VIDEO INPUT</span><strong>Choose a source</strong></div><span class="secure-label"><span>⌑</span> PROCESSING ON THIS SERVER</span></div>
+              <div class="source-control-head"><div><span class="control-kicker">01 · VIDEO SOURCE</span><strong>Choose a video source</strong></div></div>
               <div class="source-tabs" role="tablist" aria-label="Video source">
                 <button class="source-tab selected" type="button" role="tab" aria-selected="true" data-source="camera"><span>◎</span> Camera</button>
                 <button class="source-tab" type="button" role="tab" aria-selected="false" data-source="rtsp"><span>⌁</span> Stream URL</button>
@@ -204,7 +210,7 @@
 
           <section class="panel roi-config-panel" id="configurator">
             <div class="panel-heading roi-heading">
-              <div><div class="panel-title-line"><h2>Detection zone configurator</h2><span class="roi-state" id="roi-state">SAVED REGION</span></div><p>Choose exactly where VIDES should evaluate vehicles on the frame.</p></div>
+              <div><div class="panel-title-line"><div class="config-section-title"><span class="control-kicker">02 · DETECTION ZONE</span><h2>Set the road area</h2></div><span class="roi-state" id="roi-state">SAVED REGION</span></div><p>Capture a frame, then drag the four corners to outline the road.</p></div>
               <span class="frame-size" id="roi-frame-size">640 × 360 FRAME</span>
             </div>
             <div class="roi-config-layout">
@@ -216,13 +222,17 @@
                   <div class="selector-scale"><span>START</span><span id="video-frame-number">FRAME 0</span><span id="video-duration">00:00</span></div>
                 </div>
                 <div class="roi-canvas-wrap"><canvas id="roi-canvas" width="640" height="360" aria-label="Drag the four green handles to configure a perspective-shaped detection zone"></canvas><div class="roi-canvas-empty" id="roi-canvas-empty"><span>◈</span><strong id="roi-empty-title">Frame preview</strong><small id="roi-empty-copy">Select a source, then capture a frame to configure the region on the real view.</small></div></div>
-                <div class="roi-canvas-caption"><span><i class="roi-caption-dot"></i> VEHICLE DETECTION AREA</span><span>Four-corner perspective zone · drag beyond frame edges</span></div>
+                <div class="roi-canvas-caption"><span><i class="roi-caption-dot"></i> DETECTION AREA</span><span>Drag corners · extend beyond frame edges</span></div>
+                <details class="coordinate-disclosure">
+                  <summary>Fine-tune corner coordinates</summary>
+                  <div class="roi-coordinates-head"><span>CONTROL POINTS</span><span>FRAME PIXELS</span></div>
+                  <div class="roi-points-list" id="roi-points-list"></div>
+                </details>
+                <div class="roi-action-row"><button class="roi-reset-button" id="reset-roi">Reset corners</button><button class="roi-save-button" id="save-roi" disabled>Apply detection zone</button></div>
+                <div class="roi-feedback" id="roi-feedback" role="status">Saved region is active for the next frame.</div>
               </div>
-              <aside class="roi-settings-column">
-                <div class="roi-mode-card"><span class="roi-mode-icon">⌖</span><div><strong>Perspective polygon</strong><small>Four corners · ground-plane mapping</small></div><span class="roi-mode-check">✓</span></div>
-                <p class="roi-instructions">Set each corner on the road boundary. Use the padded editor around the preview to place corners up to 25% beyond the frame when the road continues off-screen.</p>
-                <div class="roi-coordinates-head"><span>CONTROL POINTS</span><span>640 × 360 PX</span></div>
-                <div class="roi-points-list" id="roi-points-list"></div>
+              <aside class="roi-settings-column" aria-label="Detection and traffic settings">
+                <div class="config-section-heading"><span class="control-kicker">03 · DETECTION SETTINGS</span><h2>Model &amp; traffic</h2></div>
                 <div class="model-config">
                   <div class="model-config-heading"><span>DETECTION MODEL</span><span id="model-config-state">Checking</span></div>
                   <div class="model-config-controls"><select id="detector-model" aria-label="Detection model"></select><button id="load-model" type="button" disabled>Load model</button></div>
@@ -247,15 +257,12 @@
                   <label class="traffic-number-field"><span>KNOWN ROAD LENGTH <small>Along the selected flow direction</small></span><span class="traffic-input-wrap"><input type="number" id="road-length" min="1" max="10000" step="1" value="50" /><b>m</b></span></label>
                   <label class="traffic-number-field"><span>SPEED LIMIT <small>Threshold for overspeed events</small></span><span class="traffic-input-wrap"><input type="number" id="speed-limit" min="1" max="300" value="30" /><b>km/h</b></span></label>
                   <label class="confidence-field"><span>DETECTION CONFIDENCE <b id="confidence-value">60%</b></span><input type="range" id="detection-confidence" min="0.1" max="0.95" step="0.05" value="0.6" /><small>Lower values detect more vehicles; higher values are more selective.</small></label>
-                  <div class="traffic-calibration-note">Speed is calibrated against the known road length across this perspective region.</div>
+                  <button class="traffic-save-button" id="save-traffic" disabled>Apply traffic settings</button>
                 </div>
-                <div class="roi-action-row"><button class="roi-reset-button" id="reset-roi">Reset to default</button><button class="roi-save-button" id="save-roi" disabled>Apply region</button></div>
-                <button class="traffic-save-button" id="save-traffic" disabled>Apply traffic settings</button>
                 <div class="control-footer session-actions">
-                  <p>Start detection once the source, frame, region, and traffic profile are ready.</p>
+                  <p>Apply the zone and traffic settings before starting.</p>
                   <div class="control-buttons"><button class="stop-button" id="stop-button" type="button" disabled>Stop session</button><button class="start-button" id="start-button" type="button" disabled><span class="start-icon">▶</span> Start detection</button></div>
                 </div>
-                <div class="roi-feedback" id="roi-feedback" role="status">Saved region is active for the next frame.</div>
               </aside>
             </div>
           </section>
@@ -391,6 +398,6 @@
       </main>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="/app.js" defer></script>
+    <script src="/app.js?v=theme-toggle-2" defer></script>
   </body>
 </html>
