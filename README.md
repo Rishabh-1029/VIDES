@@ -1,5 +1,9 @@
 # VIDES — Vehicle Intelligent Detection & Event System
 
+<p align="center">
+  <img src="frontend/vides-favicon.svg" alt="VIDES logo" width="120" />
+</p>
+
 VIDES (Vehicle Intelligent Detection & Event System) is a vehicle detection and event-monitoring component of ATMS (Advanced Traffic Management System). It is a modular, real-time traffic monitoring application that uses YOLOv8, DeepSORT, and OpenCV to detect and track vehicles in live camera feeds and recorded video. It estimates vehicle speed and records traffic violations and unusual events such as overspeeding, wrong-way movement, stalling, possible collisions for accident review, and heavy-vehicle entry.
 
 The Python backend processes the video source. A browser dashboard lets an operator configure the view, monitor detection, review session events, and download reports.
